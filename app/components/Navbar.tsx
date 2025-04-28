@@ -171,6 +171,41 @@ export function Navbar({ cartCount }: NavbarProps) {
           </div>
           
           {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
+               {/* Mobile Search */}
           <div className="mt-4 pt-3 border-t border-gray-700">
             <div className="flex items-center bg-gray-700 rounded-lg overflow-hidden">
               <input
