@@ -17,9 +17,9 @@ const createUser = asyncHandler(async (req, res) => {
       return;
     }
 
-    const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt);
-  const newUser = new User({ username, email, password: hashedPassword });
+   const salt = await bcrypt.genSalt(10);
+   const hashedPassword = await bcrypt.hash(password, salt);
+   const newUser = new User({ username, email, password: hashedPassword });
 
   try {
     await newUser.save();
@@ -62,12 +62,12 @@ const loginUser = asyncHandler(async (req, res) => {
         return;
       }
       else {
-        res.status(400).json("Incorrect Username or Password")
+        res.status(400).json({message : "Incorrect Username or Password"})
         return;
       }
     }
     else{
-        res.status(400).json("No Record Found! Please Sign Up first")
+        res.status(400).json({ message: "No Record Found! Please Signup first" });
         return;
     }
 });
