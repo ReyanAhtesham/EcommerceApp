@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   AiOutlineHome,
   AiOutlineShopping,
@@ -7,31 +7,31 @@ import {
   AiOutlineShoppingCart,
 } from "react-icons/ai";
 import { FaHeart } from "react-icons/fa";
-import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
-import "./Navigation.css";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { useLogoutMutation } from "../../redux/api/usersApiSlice";
 import { logout } from "../../redux/features/auth/authSlice";
+import "./Navigation.css";
 
 const Navigation = () => {
   const { userInfo } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
-
-  const toggleDropdown = () => {
-    setDropdownOpen(!dropdownOpen);
-  };
-  // Toggle handler
-  const toggleSidebar = () => {
-    setShowSidebar(!showSidebar);
-  };
-  
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
+  const dropdownRef = useRef(null);
 
   const [logoutApiCall] = useLogoutMutation();
+
+  const toggleDropdown = () => {
+    setDropdownOpen((prev) => !prev);
+  };
+
+  const toggleSidebar = () => {
+    setShowSidebar((prev) => !prev);
+  };
 
   const logoutHandler = async () => {
     try {
@@ -43,6 +43,22 @@ const Navigation = () => {
     }
   };
 
+  // ✅ Close dropdown on route change
+  useEffect(() => {
+    setDropdownOpen(false);
+  }, [location]);
+
+  // ✅ Optional: Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <div
       style={{ zIndex: 9999 }}
@@ -52,64 +68,40 @@ const Navigation = () => {
       id="navigation-container"
     >
       <div className="flex flex-col justify-center">
-        <Link
-          to="/"
-          className="flex items-center mb-16 mt-4"
-        >
+        <Link to="/" className="flex items-center mb-16 mt-4">
           <AiOutlineHome size={26} />
           <span className="hidden nav-item-name ml-2">HOME</span>
         </Link>
 
-        <Link
-          to="/shop"
-          className="flex items-center mb-16"
-        >
+        <Link to="/shop" className="flex items-center mb-16">
           <AiOutlineShopping size={26} />
           <span className="hidden nav-item-name ml-2">SHOP</span>
         </Link>
 
-        <Link 
-          to="/cart" 
-          className="flex mb-16"
-        >
+        <Link to="/cart" className="flex mb-16">
           <div className="flex items-center">
             <AiOutlineShoppingCart className="mr-2" size={26} />
             <span className="hidden nav-item-name">Cart</span>
           </div>
-
-         {false && <div className="absolute top-auto">
-            {true < 0 && (
-              <span>
-                <span className="px-1 py-0 text-sm text-white bg-pink-500 rounded-full ">
-                  {0}
-                </span>
-              </span>
-            )}
-          </div>}
         </Link>
 
-        <Link 
-          to="/favorite" 
-          className="flex items-center mb-16"
-        >
-          <FaHeart size={20} className="ml-1"/>
+        <Link to="/favorite" className="flex items-center mb-16">
+          <FaHeart size={20} className="ml-1" />
           <span className="hidden nav-item-name ml-2">Favorites</span>
         </Link>
       </div>
 
       <div className="mt-auto">
         {userInfo ? (
-          <div className="relative">
+          <div className="relative" ref={dropdownRef}>
             <button
               onClick={toggleDropdown}
               className="flex items-center text-white focus:outline-none"
             >
-              <span className="hidden nav-item-name">{userInfo.username}</span>
+              <span className="hidden nav-item-name cursor-pointer">{userInfo.username}</span>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className={`h-4 w-4 ml-1 ${
-                  dropdownOpen ? "transform rotate-180" : ""
-                }`}
+                className={`h-4 w-4 ml-1 ${dropdownOpen ? "transform rotate-180" : ""}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="white"
@@ -123,7 +115,7 @@ const Navigation = () => {
               </svg>
             </button>
 
-            {dropdownOpen && userInfo && (
+            {dropdownOpen && (
               <ul
                 className={`absolute right-0 mt-2 mr-14 space-y-2 bg-gray-800 text-white cursor-pointer ${
                   !userInfo.isAdmin ? "-top-20" : "-top-80"
@@ -134,6 +126,7 @@ const Navigation = () => {
                     <li>
                       <Link
                         to="/admin/dashboard"
+                        onClick={() => setDropdownOpen(false)}
                         className="block px-4 py-2 hover:bg-gray-600"
                       >
                         Dashboard
@@ -141,7 +134,8 @@ const Navigation = () => {
                     </li>
                     <li>
                       <Link
-                        to="/admin/productlist"
+                        to="/admin/allproductslist"
+                        onClick={() => setDropdownOpen(false)}
                         className="block px-4 py-2 hover:bg-gray-600"
                       >
                         Products
@@ -150,6 +144,7 @@ const Navigation = () => {
                     <li>
                       <Link
                         to="/admin/categorylist"
+                        onClick={() => setDropdownOpen(false)}
                         className="block px-4 py-2 hover:bg-gray-600"
                       >
                         Category
@@ -158,6 +153,7 @@ const Navigation = () => {
                     <li>
                       <Link
                         to="/admin/orderlist"
+                        onClick={() => setDropdownOpen(false)}
                         className="block px-4 py-2 hover:bg-gray-600"
                       >
                         Orders
@@ -166,6 +162,7 @@ const Navigation = () => {
                     <li>
                       <Link
                         to="/admin/userlist"
+                        onClick={() => setDropdownOpen(false)}
                         className="block px-4 py-2 hover:bg-gray-600"
                       >
                         Users
@@ -173,15 +170,21 @@ const Navigation = () => {
                     </li>
                   </>
                 )}
-
                 <li>
-                  <Link to="/profile" className="block px-4 py-2 hover:bg-gray-600">
+                  <Link
+                    to="/profile"
+                    onClick={() => setDropdownOpen(false)}
+                    className="block px-4 py-2 hover:bg-gray-600"
+                  >
                     Profile
                   </Link>
                 </li>
                 <li>
                   <button
-                    onClick={logoutHandler}
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      logoutHandler();
+                    }}
                     className="block w-full px-4 py-2 text-left hover:bg-gray-600"
                   >
                     Logout
@@ -193,19 +196,13 @@ const Navigation = () => {
         ) : (
           <ul>
             <li>
-              <Link
-                to="/login"
-                className="flex items-center mb-6"
-              >
+              <Link to="/login" className="flex items-center mb-6">
                 <AiOutlineLogin size={26} />
                 <span className="hidden nav-item-name ml-2">LOGIN</span>
               </Link>
             </li>
             <li>
-              <Link
-                to="/register"
-                className="flex items-center"
-              >
+              <Link to="/register" className="flex items-center">
                 <AiOutlineUserAdd size={26} />
                 <span className="hidden nav-item-name ml-2">REGISTER</span>
               </Link>

@@ -1,6 +1,6 @@
 import Category from "../models/categoryModel.js";
 import asyncHandler from "../middlewares/asyncHandler.js";
-
+import Product from "../models/productModel.js"
 const createCategory = asyncHandler(async (req, res) => {
   try {
     const { name } = req.body;
@@ -46,13 +46,27 @@ const updateCategory = asyncHandler(async (req, res) => {
 
 const removeCategory = asyncHandler(async (req, res) => {
   try {
-    const removed = await Category.findByIdAndDelete(req.params.categoryId);
-    res.json(removed);
+    const categoryId = req.params.categoryId;
+
+    // First, delete all products associated with the category
+    await Product.deleteMany({ category: categoryId });
+
+    // Now, delete the category
+    const removedCategory = await Category.findByIdAndDelete(categoryId);
+
+    if (!removedCategory) {
+      return res.status(404).json({ error: "Category not found" });
+    }
+
+    res.json({ message: "Category and associated products deleted successfully", removedCategory });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+
+
 
 const listCategory = asyncHandler(async (req, res) => {
   try {
