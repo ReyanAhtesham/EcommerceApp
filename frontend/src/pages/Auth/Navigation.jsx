@@ -12,6 +12,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { useLogoutMutation } from "../../redux/api/usersApiSlice";
 import { logout } from "../../redux/features/auth/authSlice";
 import "./Navigation.css";
+import FavoritesCount from "../Products/FavoritesCount";
 
 const Navigation = () => {
   const { userInfo } = useSelector((state) => state.auth);
@@ -43,12 +44,12 @@ const Navigation = () => {
     }
   };
 
-  // ✅ Close dropdown on route change
+  
   useEffect(() => {
     setDropdownOpen(false);
   }, [location]);
 
-  // ✅ Optional: Close dropdown on outside click
+  //Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -88,6 +89,7 @@ const Navigation = () => {
         <Link to="/favorite" className="flex items-center mb-16">
           <FaHeart size={20} className="ml-1" />
           <span className="hidden nav-item-name ml-2">Favorites</span>
+          <FavoritesCount />
         </Link>
       </div>
 
