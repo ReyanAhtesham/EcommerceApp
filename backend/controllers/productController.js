@@ -196,11 +196,16 @@ const fetchNewProducts = asyncHandler(async (req, res) => {
 
 const filterProducts = asyncHandler(async (req, res) => {
   try {
-    const { checked, radio } = req.body;
+    const { checked, radio, maxPrice } = req.body;
 
     let args = {};
     if (checked.length > 0) args.category = checked;
     if (radio.length) args.price = { $gte: radio[0], $lte: radio[1] };
+
+    // Handling maxPrice if present
+    if (maxPrice) {
+      args.price = { ...(args.price || {}), $lte: maxPrice };
+    }
 
     const products = await Product.find(args);
     res.json(products);
