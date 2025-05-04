@@ -16,6 +16,8 @@ import FavoritesCount from "../Products/FavoritesCount";
 
 const Navigation = () => {
   const { userInfo } = useSelector((state) => state.auth);
+  const { cartItems } = useSelector((state) => state.cart);
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
@@ -83,6 +85,15 @@ const Navigation = () => {
           <div className="flex items-center">
             <AiOutlineShoppingCart className="mr-2" size={26} />
             <span className="hidden nav-item-name">Cart</span>
+          </div>
+          <div className="absolute pl-5">
+            {cartItems.length > 0 && (
+              <span>
+                <span className="px-1 py-0 text-sm text-white bg-pink-500 rounded-full">
+                  {cartItems.reduce((a, c) => a + c.qty, 0)}
+                </span>
+              </span>
+            )}
           </div>
         </Link>
 

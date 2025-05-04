@@ -72,7 +72,7 @@ const Tabs = ({
                     required
                     value={rating}
                     onChange={(e) => setRating(e.target.value)}
-                    className="p-2 border rounded-lg xl:w-[40rem] text-black"
+                    className="p-2 border rounded-lg xl:w-[40rem] text-gray-500"
                   >
                     <option value="">Select</option>
                     <option value="1">Inferior</option>
@@ -94,7 +94,7 @@ const Tabs = ({
                     required
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
-                    className="p-2 border rounded-lg xl:w-[40rem] text-black"
+                    className="p-2 border rounded-lg xl:w-[40rem] text-gray-200"
                   ></textarea>
                 </div>
                 <button

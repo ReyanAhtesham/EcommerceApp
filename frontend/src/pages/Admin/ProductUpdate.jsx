@@ -17,8 +17,6 @@ const AdminProductUpdate = () => {
 
   const { data: productData } = useGetProductByIdQuery(params._id);
 
-  console.log(productData);
-
   const [image, setImage] = useState(productData?.image || "");
   const [name, setName] = useState(productData?.name || "");
   const [description, setDescription] = useState(
@@ -50,15 +48,12 @@ const AdminProductUpdate = () => {
       setDescription(productData.description);
       setPrice(productData.price);
   
-      // Fix: directly use category if it's a string
       setCategory(productData.category);
   
-      console.log("Category of product:", productData.category); // should now print ObjectId
       setQuantity(productData.quantity);
       setBrand(productData.brand);
       setImage(productData.image);
       setStock(productData.countInStock); // <-- Add this
-   
     }
   }, [productData]);
 
@@ -82,6 +77,14 @@ const AdminProductUpdate = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if(stock > quantity){
+      toast.error("Stock cannot be greater than Batch Quantity!")
+      return;
+    }
+    if(!image || !name || !description || !price || !category || !quantity || !brand || !stock){
+      toast.error("All fields required")
+      return;
+    }
     try {
       const formData = new FormData();
       formData.append("image", image);

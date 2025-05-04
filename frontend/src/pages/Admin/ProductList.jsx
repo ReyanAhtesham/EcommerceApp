@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   useCreateProductMutation,
@@ -24,9 +24,10 @@ const ProductList = () => {
   const [createProduct] = useCreateProductMutation();
   const { data: categories } = useFetchCategoriesQuery();
 
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+   
     try {
       const productData = new FormData();
       productData.append("image", image);

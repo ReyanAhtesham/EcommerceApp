@@ -4,6 +4,7 @@ import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import moment from "moment";
+import { useSelector } from "react-redux";
 import {
   FaBox,
   FaClock,
@@ -14,6 +15,7 @@ import {
 
 const ProductCarousel = () => {
   const { data: products, isLoading, error } = useGetTopProductsQuery();
+  const { userInfo } = useSelector((state) => state.auth);
 
   const settings = {
     dots: false,
@@ -87,10 +89,10 @@ const ProductCarousel = () => {
                         <FaStar className="mr-2 text-white !text-sm !font-light" /> Ratings:{" "}
                         {Math.round(rating)}
                       </h1>
-                      <h1 className="flex items-center mb-4">
+                     {userInfo && userInfo.isAdmin && <h1 className="flex items-center mb-4">
                         <FaShoppingCart className="mr-2 text-white !text-sm !font-light" /> Quantity:{" "}
                         {quantity}
-                      </h1>
+                      </h1>}
                       <h1 className="flex items-center mb-4">
                         <FaBox className="mr-2 text-white !text-sm !font-light" /> In Stock:{" "}
                         {countInStock}
