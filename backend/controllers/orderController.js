@@ -1,5 +1,10 @@
 import Order from "../models/orderModel.js";
 import Product from "../models/productModel.js";
+import asyncHandler from "../middlewares/asyncHandler.js";
+import dotenv from "dotenv";
+dotenv.config();
+import Stripe from 'stripe';
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Utility Function
 function calcPrices(orderItems) {
@@ -200,6 +205,140 @@ const markOrderAsDelivered = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+// In controllers/stripeController.js
+export const confirmStripePayment = async (req, res) => {
+  const { sessionId } = req.body;
+
+  try {
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const customerEmail = session.customer_details.email;
+
+    // You should include metadata in your session creation with orderId
+    const orderId = session.metadata.orderId;
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    order.isPaid = true;
+    order.paidAt = Date.now();
+    order.paymentResult = {
+      id: session.id,
+      status: session.payment_status,
+      update_time: session.created,
+      email_address: customerEmail,
+    };
+
+    const updatedOrder = await order.save();
+    res.json(updatedOrder);
+  } catch (error) {
+    console.error('Error confirming Stripe payment:', error.message);
+    res.status(400).json({ message: error.message });
+  }
+};
+export const updateOrderToPaid = asyncHandler(async (req, res) => {
+  const order = await Order.findById(req.params.id);
+
+  if (!order) {
+    res.status(404);
+    throw new Error("Order not found");
+  }
+
+  // Check if this is a Stripe payment
+  if (req.body.source === 'stripe' && req.body.id) {
+    try {
+      // Verify the payment with Stripe
+      const session = await stripe.checkout.sessions.retrieve(req.body.id);
+      
+      // Ensure this session is for this order
+      if (session.metadata.orderId !== req.params.id) {
+        res.status(400);
+        throw new Error("Invalid payment session for this order");
+      }
+      
+      if (session.payment_status === "paid") {
+        order.isPaid = true;
+        order.paidAt = Date.now();
+        order.paymentResult = {
+          id: session.id,
+          status: session.payment_status,
+          update_time: new Date(session.created * 1000).toISOString(),
+          email_address: session.customer_details?.email || "",
+        };
+      } else {
+        res.status(400);
+        throw new Error("Payment not completed");
+      }
+    } catch (error) {
+      res.status(400);
+      throw new Error(`Error verifying payment: ${error.message}`);
+    }
+  } else {
+    // Handle PayPal or other payment methods
+    order.isPaid = true;
+    order.paidAt = Date.now();
+    order.paymentResult = {
+      id: req.body.id,
+      status: req.body.status,
+      update_time: req.body.update_time,
+      email_address: req.body.payer?.email_address,
+    };
+  }
+
+  const updatedOrder = await order.save();
+  res.status(200).json(updatedOrder);
+});
+
+// @desc    Create Stripe checkout session
+// @route   POST /api/orders/:id/stripe-checkout
+// @access  Private
+export const createStripeCheckout = asyncHandler(async (req, res) => {
+  const { cartItems } = req.body;
+  const orderId = req.params.id;
+  console.log(orderId)
+  if (!cartItems || !Array.isArray(cartItems)) {
+    res.status(400);
+    throw new Error("Invalid cart items");
+  }
+
+  // Find the order to ensure it exists
+  const order = await Order.findById(orderId);
+  if (!order) {
+    res.status(404);
+    throw new Error("Order not found");
+  }
+  else{
+    console.log("Order found!")
+  }
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      line_items: cartItems.map((item) => ({
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: item.name,
+          },
+          unit_amount: Math.round(item.price * 100),
+        },
+        quantity: item.qty,
+      })),
+      metadata: {
+        orderId: orderId, // Store orderId in metadata
+      },
+      success_url: `${process.env.FRONTEND_URL}/order/${orderId}?payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL}/order/${orderId}?payment_canceled=true`,
+    });
+
+    res.json({ url: session.url });
+  } catch (error) {
+    res.status(500);
+    throw new Error(`Stripe checkout failed: ${error.message}`);
+  }
+});
 
 export {
   createOrder,

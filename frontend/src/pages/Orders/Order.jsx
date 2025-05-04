@@ -1,8 +1,7 @@
 import { useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { loadStripe } from "@stripe/stripe-js";
 
 import Message from "../../components/Message";
 import Loader from "../../components/Loader";
@@ -10,55 +9,100 @@ import Loader from "../../components/Loader";
 import {
   useDeliverOrderMutation,
   useGetOrderDetailsQuery,
+  usePayOrderMutation,
 } from "../../redux/api/orderApiSlice";
-
-const stripePromise = loadStripe("pk_test_51RL7RzPSaB7hYxyKpeevUZaU1K6FAc0GkhAF1M7Q59TWjSBeN8YYYuCO9KVnl3GGJHo9bh9bPEwzLgCFSwW5s1EY002Sa4kGgS");
 
 const Order = () => {
   const { id: orderId } = useParams();
+  const [searchParams] = useSearchParams();
+  const paymentSuccess = searchParams.get('payment_success');
+  const sessionId = searchParams.get('session_id');
 
-  const { data: order, refetch, isLoading, error } =
-    useGetOrderDetailsQuery(orderId);
+  const { 
+    data: order, 
+    refetch, 
+    isLoading, 
+    error 
+  } = useGetOrderDetailsQuery(orderId);
 
-  const [deliverOrder, { isLoading: loadingDeliver }] =
-    useDeliverOrderMutation();
+  const [payOrder, { isLoading: loadingPay }] = usePayOrderMutation();
+  const [deliverOrder, { isLoading: loadingDeliver }] = useDeliverOrderMutation();
 
   const { userInfo } = useSelector((state) => state.auth);
 
-  // Stripe Checkout handler
+  // Handle Stripe payment verification
+  useEffect(() => {
+    if (paymentSuccess === 'true' && sessionId && order && !order.isPaid) {
+      
+      const verifyPayment = async () => {
+        try {
+          console.log("Verifying payment with session ID:", sessionId);
+          
+          // Using the existing payOrder mutation with the session ID
+          const result = await payOrder({ 
+            orderId, 
+            details: { 
+              id: sessionId,
+              source: 'stripe'
+            } 
+          }).unwrap();
+          
+          console.log("Payment verification result:", result);
+          toast.success("Payment successful!");
+          refetch();
+        } catch (err) {
+          console.error("Payment verification error:", err);
+          toast.error(err?.data?.message || err.message || "Failed to verify payment");
+        }
+      };
+      
+      verifyPayment();
+    }
+  }, [paymentSuccess, sessionId, order, payOrder, orderId, refetch]);
+
+  // Handle Stripe checkout
   const handleStripeCheckout = async () => {
+    if (!order) return;
+    
     try {
-      const res = await fetch(`/api/orders/${orderId}/stripe/create-checkout-session`, {
+      console.log("Initiating checkout for order ID:", orderId);
+      const res = await fetch(`/api/orders/${orderId}/stripe-checkout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({ cartItems: order.orderItems }),
       });
-
-      const { sessionId } = await res.json();
-      const stripe = await stripePromise;
-
-      const result = await stripe.redirectToCheckout({ sessionId });
-
-      if (result.error) {
-        toast.error(result.error.message);
+      
+      const data = await res.json();
+      
+      if (data.url) {
+        // Redirect to Stripe checkout
+        window.location.href = data.url;
+      } else {
+        toast.error("Failed to create checkout session");
       }
     } catch (error) {
-      toast.error("Stripe checkout failed");
+      console.error("Stripe checkout error:", error);
+      toast.error(error.message || "Stripe checkout failed");
     }
   };
 
   const deliverHandler = async () => {
-    await deliverOrder(orderId);
-    refetch();
+    try {
+      await deliverOrder(orderId).unwrap();
+      refetch();
+      toast.success("Order marked as delivered");
+    } catch (err) {
+      toast.error(err?.data?.message || err.message);
+    }
   };
+  
+  if (isLoading) return <Loader />;
+  if (error) return <Message variant="danger">{error.data?.message || "Error loading order"}</Message>;
 
-  return isLoading ? (
-    <Loader />
-  ) : error ? (
-    <Message variant="danger">{error.data.message}</Message>
-  ) : (
-    <div className="container flex flex-col ml-[10rem] md:flex-row">
+  return (
+    <div className="container flex flex-col pl-[10rem] md:flex-row pb-7">
       <div className="md:w-2/3 pr-4">
         <div className="border gray-300 mt-5 pb-4 mb-5">
           {order.orderItems.length === 0 ? (
@@ -89,8 +133,8 @@ const Order = () => {
                         <Link to={`/product/${item.product}`}>{item.name}</Link>
                       </td>
                       <td className="p-2 text-center">{item.qty}</td>
-                      <td className="p-2 text-center">${item.price}</td>
-                      <td className="p-2 text-center">
+                      <td className="p-2">${item.price}</td>
+                      <td className="p-2">
                         ${(item.qty * item.price).toFixed(2)}
                       </td>
                     </tr>
@@ -125,9 +169,22 @@ const Order = () => {
             {order.paymentMethod}
           </p>
           {order.isPaid ? (
-            <Message variant="success">Paid on {order.paidAt}</Message>
+            <>
+            <Message variant="success">
+              Paid on {new Date(order.paidAt).toLocaleString()}
+            </Message>
+            <br />
+            </>
           ) : (
             <Message variant="danger">Not paid</Message>
+          )}
+          
+          {order.isDelivered ? (
+            <Message variant="success">
+              Delivered on {new Date(order.deliveredAt).toLocaleString()}
+            </Message>
+          ) : (
+            <Message variant="danger">Not delivered</Message>
           )}
         </div>
 
@@ -149,22 +206,25 @@ const Order = () => {
           <span>$ {order.totalPrice}</span>
         </div>
 
+        {/* Payment button - only show if not paid */}
         {!order.isPaid && (
           <button
             type="button"
             className="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded w-full mt-4"
             onClick={handleStripeCheckout}
+            disabled={loadingPay}
           >
-            Pay with Stripe
+            {loadingPay ? "Processing..." : "Pay with Stripe"}
           </button>
         )}
 
+        {/* Admin controls - only show for admins */}
         {loadingDeliver && <Loader />}
         {userInfo && userInfo.isAdmin && order.isPaid && !order.isDelivered && (
           <div>
             <button
               type="button"
-              className="bg-pink-500 text-white w-full py-2"
+              className="bg-pink-500 hover:bg-pink-600 text-white w-full py-2 mt-4 rounded"
               onClick={deliverHandler}
             >
               Mark As Delivered
